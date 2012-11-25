@@ -1,0 +1,204 @@
+<html>
+  <head>
+    <style type="text/css">
+      body {
+        font-family: Verdana, Arial, Helvetica, sans-serif;
+        text-align: center;
+      }
+      table {
+        margin-bottom: 15px;
+      }
+      th, td {
+        padding: 5px;
+      }
+      td {
+        border: 1px solid silver;
+        vertical-align: top;
+      }
+      th {
+        color: white;
+        background-color: black;
+      }
+      h1 {
+        font-size: 150%;
+      }
+      h2 {
+        font-size: 100%;
+        margin: 4px 0;
+      }
+      #header {
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid silver;
+      }
+      #header div {
+        display: inline-block;
+        vertical-align: top;
+        text-align: left;
+        width: 24%;
+      }
+      #recipient:before {
+        content: "To: ";
+      }
+      #sender:before {
+        content: "From: ";
+      }
+      #show {
+        width: 900px;
+      }
+      #_new ul {
+        font-size: 75%;
+        margin: 0 0 10px 0;
+        padding: 0;
+        display: inline-block;
+      }
+      #_new li {
+        display: inline-block;
+        margin-right: 2px;
+      }
+    </style>
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.8.3.min.js"></script>
+    <script type="text/javascript">
+    function create() {
+      var hash = window.btoa($("#invoice_data").val());
+      var localData = localStorage.getItem("unvoices");
+      var invoices = localData ? JSON.parse(localData) : [];
+      var exists = false;
+      for (var i = 0; i < invoices.length; i++) {
+        if (invoices[i] == hash) {
+          exists = true;
+          break;
+        }
+      }
+      if (!exists) {
+        invoices[invoices.length] = hash;
+      }
+      localStorage.setItem("unvoices", JSON.stringify(invoices));
+      return hash;
+    }
+    function show(hash) {
+      $("#_new").hide();
+      $("#show").show();
+      var invoice = JSON.parse(window.atob(hash));
+      var $details = $("#details");
+      $details.html("");
+      $details.append("Date: " + invoice.date + "<br />Invoice #: " + invoice.number);
+      var $recipient = $("#recipient");
+      $recipient.html("");
+      $recipient.append(invoice.to.replace(/ *\n */g, "<br />"));
+      var $sender = $("#sender");
+      $sender.html("");
+      $sender.append(invoice.from.replace(/ *\n */g, "<br />"));
+      var grandTotal = 0;
+      var $tbody = $("tbody");
+      $tbody.children().remove();
+      $tbody.append("<tr><th>Description</th><th>Qty</th><th>Rate</th><th>Amount</th></tr>");
+      var $row;
+      $.each(invoice.entries, function() {
+        grandTotal += this.qty * this.rate;
+        $row = $("<tr></tr>");
+        $row.append("<td class='desc'>" + this.desc + "</td>");
+        $row.append("<td class='qty'>" + this.qty + " " + this.unit + "</td>");
+        $row.append("<td class='rate'>" + this.rate + " " + invoice.currency + "</td>");
+        $row.append("<td class='amount'>" + ( this.qty * this.rate) + " " + invoice.currency + "</td>");
+        $tbody.append($row) 
+      });
+      $row = $("<tr></tr>");
+      $row.append("<td colspan='3' class='grand-total'>Grand Total:</td><td>" + grandTotal + " " + invoice.currency + "</td>");
+      $tbody.append($row);
+      var $terms = $("#terms");
+      $terms.html("TERMS: ");
+      $terms.append(invoice.terms);
+      $("#show").show();
+    }
+    function nav() {
+      var localData = localStorage.getItem("unvoices");
+      var $my_unvoices = $("#my_unvoices");
+      $my_unvoices.children().remove();
+      var unvoices = localData ? JSON.parse(localData) : [];
+      if (unvoices.length > 0) {
+        for (var i = 0; i < unvoices.length; i++) {
+          var hash = unvoices[i];
+          $my_unvoices.append("<li><a href='#" + hash + "'>" + (i+1) + "</a></li>")
+        }
+        $my_unvoices.append('<a href="#" id="truncate">Clear</a>');
+        $("#truncate").on("click", function(e) {
+          if (confirm("Delete all?")) {
+            localStorage.setItem("unvoices", JSON.stringify([]));
+            nav();
+          }
+          e.preventDefault();
+        });
+      }
+    }
+    function _new() {
+      $("#show").hide();
+      $("#_new").show();
+      nav();
+      $("#create").one("click", function(e) {
+        var hash = create();
+        history.pushState(null, null, window.location.pathname + "#" + hash);
+        show(hash);
+        e.preventDefault();
+      });
+    }
+    var nstatepops = 0;
+    //$(document).ready(function() {
+      window.addEventListener("popstate", function(e) {
+        var hash = window.location.hash.slice(1);
+        if (hash.length > 0) {
+          show(hash);
+        }
+        else {
+          _new();
+        }
+      });
+    //});
+    </script>
+  </head>
+  <body>
+    <div id="_new" style="display:none">
+      <h1>Unvoice</h1>
+      <h2>Invoices for People Who Hate Making Invoices</h2>
+      <ul id="my_unvoices"></ul>
+      <form onsubmit="javascript: return false">
+        <textarea id="invoice_data" style="font-family: monospace; width: 100%; height: 300px; margin-bottom: 10px">{
+  "date": "28 Nov 2012",
+  "number": "#001",
+  "terms": "Payable within 10 days of receipt",
+  "to": "Some Company\n123 Main St.\nSuite 666\nCityburg\n12345\nUSA",
+  "from": "Your Name\n456 Your St.\nTownvale\n54321\nUSA",
+  "currency": "USD",
+  "entries": [
+    {
+      "desc": "Reoptimized frobnicator",
+      "qty": 5,
+      "unit": "days",
+      "rate": 200
+    },
+    {
+      "desc": "Frobnicated reoptimizer",
+      "qty": 3,
+      "unit": "days",
+      "rate": 200
+    }
+  ]
+}</textarea>
+        <button id="create" style="padding-left: 19px">Create Invoice</button>
+      </form>
+    </div>
+    <div id="show" style="display:none">
+      <h1>Invoice</h1>
+      <div id="header">
+        <div id="details"></div>
+        <div id="recipient"></div>
+        <div id="sender"></div>
+      </div>
+      <h2>Services provided</h2>
+      <table align="center">
+        <tbody></tbody>
+      </table>
+      <div id="terms"></div>
+    </div>
+  </body>
+</html>
